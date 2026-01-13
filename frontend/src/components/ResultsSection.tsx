@@ -35,17 +35,19 @@ const COLORS = {
 };
 
 export const ResultsSection = ({ data }: ResultsSectionProps) => {
-  const machines = data.machines ?? [];
+  /** ✅ FIX: correct data source */
+  const fh = data.factory_health ?? data;
+  const machines = fh.machines ?? [];
   const lineOpt = data.manufacturing_line_optimization;
 
   /* -------------------- PIE DATA -------------------- */
   const pieData = useMemo(
     () => [
-      { name: 'Healthy', value: data.healthy_count ?? 0, fill: COLORS.healthy },
-      { name: 'Warning', value: data.warning_count ?? 0, fill: COLORS.warning },
-      { name: 'Critical', value: data.critical_count ?? 0, fill: COLORS.critical },
+      { name: 'Healthy', value: fh.healthy_count ?? 0, fill: COLORS.healthy },
+      { name: 'Warning', value: fh.warning_count ?? 0, fill: COLORS.warning },
+      { name: 'Critical', value: fh.critical_count ?? 0, fill: COLORS.critical },
     ],
-    [data]
+    [fh]
   );
 
   /* ---------------- RISK DISTRIBUTION ---------------- */
@@ -62,18 +64,18 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
 
   /* -------------------- STATS -------------------- */
   const stats = [
-    { icon: Activity, label: 'Total Records Analyzed', value: data.total_records ?? 0, color: 'text-foreground', bg: 'bg-muted' },
-    { icon: CheckCircle, label: 'Healthy Machines', value: data.healthy_count ?? 0, color: 'text-primary', bg: 'bg-primary/10' },
-    { icon: AlertTriangle, label: 'Warning Machines', value: data.warning_count ?? 0, color: 'text-amber-dim', bg: 'bg-amber-dim/10' },
-    { icon: XCircle, label: 'Critical Machines', value: data.critical_count ?? 0, color: 'text-steel-light', bg: 'bg-steel/10' },
+    { icon: Activity, label: 'Total Records Analyzed', value: fh.total_records ?? 0 },
+    { icon: CheckCircle, label: 'Healthy Machines', value: fh.healthy_count ?? 0 },
+    { icon: AlertTriangle, label: 'Warning Machines', value: fh.warning_count ?? 0 },
+    { icon: XCircle, label: 'Critical Machines', value: fh.critical_count ?? 0 },
   ];
 
   /* ---------------- OPTIMIZATION CHART DATA ---------------- */
   const comparisonData = useMemo(() => {
     if (!lineOpt) return [];
     return [
-      { name: 'Before Optimization', output: lineOpt.before_optimization.line_output },
-      { name: 'After Optimization', output: lineOpt.after_optimization.line_output },
+      { name: 'Current Output', output: lineOpt.current_output },
+      { name: 'Optimized Output', output: lineOpt.optimized_output },
     ];
   }, [lineOpt]);
 
@@ -122,51 +124,32 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
         </motion.div>
 
         {/* OVERALL HEALTH */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto mb-12"
-        >
+        <div className="max-w-md mx-auto mb-12">
           <div className="card-highlight p-8 text-center">
             <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
             <div className="text-6xl font-bold text-primary mb-2">
-              {(data.overall_health_score ?? 0).toFixed(1)}%
-            </div>
-            <div className="progress-industrial h-3 mt-4">
-              <div
-                className="progress-industrial-fill"
-                style={{ width: `${data.overall_health_score ?? 0}%` }}
-              />
+              {(fh.overall_health_score ?? 0).toFixed(1)}%
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {stats.map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="card-industrial p-6"
-            >
-              <div className={`w-12 h-12 rounded-lg ${stat.bg} flex items-center justify-center mb-4`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
+            <div key={i} className="card-industrial p-6">
+              <stat.icon className="w-6 h-6 text-primary mb-2" />
               <p className="text-sm text-muted-foreground">{stat.label}</p>
-              <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-            </motion.div>
+              <p className="text-3xl font-bold">{stat.value}</p>
+            </div>
           ))}
         </div>
 
         {/* HEALTH CHARTS */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
           <div className="card-industrial p-6">
-            <h3 className="text-xl font-semibold mb-4 text-center">Machine Status Distribution</h3>
+            <h3 className="text-xl font-semibold mb-4 text-center">
+              Machine Status Distribution
+            </h3>
             <div className="h-72">
               <ResponsiveContainer>
                 <PieChart>
@@ -181,7 +164,9 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
           </div>
 
           <div className="card-industrial p-6">
-            <h3 className="text-xl font-semibold mb-4 text-center">Risk Score Distribution</h3>
+            <h3 className="text-xl font-semibold mb-4 text-center">
+              Risk Score Distribution
+            </h3>
             <div className="h-72">
               <ResponsiveContainer>
                 <BarChart data={riskDistribution}>
@@ -200,19 +185,16 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
 
         {/* MANUFACTURING OPTIMIZATION */}
         {lineOpt && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="card-industrial p-8"
-          >
+          <div className="card-industrial p-8">
             <h3 className="text-2xl font-bold mb-6">
               Manufacturing Line Optimization
             </h3>
 
             <div className="grid lg:grid-cols-2 gap-8">
               <div className="h-64">
-                <h4 className="text-center font-semibold mb-3">Before vs After Output</h4>
+                <h4 className="text-center font-semibold mb-3">
+                  Current vs Optimized Output
+                </h4>
                 <ResponsiveContainer>
                   <BarChart data={comparisonData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -225,7 +207,9 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
               </div>
 
               <div className="h-64">
-                <h4 className="text-center font-semibold mb-3">Post-Optimization Step Capacities</h4>
+                <h4 className="text-center font-semibold mb-3">
+                  Post-Optimization Step Capacities
+                </h4>
                 <ResponsiveContainer>
                   <BarChart data={stepCapacityData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -247,23 +231,23 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
               </ul>
             </div>
 
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+            <div
               className={`mt-6 flex items-center gap-2 font-medium ${
-                lineOpt.target_achieved ? 'text-green-600' : 'text-red-600'
+                lineOpt.improvement_percent > 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
               }`}
             >
-              {lineOpt.target_achieved ? <CheckCircle /> : <XCircle />}
-              {lineOpt.target_achieved
-                ? 'Target Achieved'
-                : 'Target not achieved due to remaining bottlenecks'}
-            </motion.div>
-          </motion.div>
+              {lineOpt.improvement_percent > 0 ? <CheckCircle /> : <XCircle />}
+              {lineOpt.improvement_percent > 0
+                ? `Throughput improved by ${lineOpt.improvement_percent}%`
+                : 'No significant throughput improvement possible under constraints'}
+            </div>
+          </div>
         )}
 
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          Production optimization is evaluated using bottleneck-driven line analysis
+          Production optimization is evaluated using bottleneck-driven analysis
           under strict spatial and operational constraints.
         </p>
       </div>
