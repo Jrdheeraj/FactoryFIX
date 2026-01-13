@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Industrial AI SaaS Design System 
+   Colors: Dark Charcoal + Industrial Amber ONLY
+   Font: IBM Plex Sans
+*/
+
+@layer base {
+  :root {
+    /* Core Industrial Palette */
+    --background: 220 10% 6%;
+    --foreground: 45 10% 90%;
+
+    --card: 220 10% 10%;
+    --card-foreground: 45 10% 90%;
+
+    --popover: 220 10% 8%;
+    --popover-foreground: 45 10% 90%;
+
+    /* Primary: Industrial Amber */
+    --primary: 38 92% 50%;
+    --primary-foreground: 220 10% 6%;
+
+    /* Secondary: Dark Charcoal */
+    --secondary: 220 8% 14%;
+    --secondary-foreground: 45 10% 90%;
+
+    --muted: 220 8% 18%;
+    --muted-foreground: 220 8% 55%;
+
+    --accent: 38 70% 40%;
+    --accent-foreground: 45 10% 95%;
+
+    --destructive: 38 92% 50%;
+    --destructive-foreground: 220 10% 6%;
+
+    --border: 220 8% 20%;
+    --input: 220 8% 18%;
+    --ring: 38 92% 50%;
+
+    --radius: 0.5rem;
+
+    /* Industrial Custom Tokens */
+    --steel: 220 8% 25%;
+    --steel-light: 220 6% 35%;
+    --charcoal-deep: 220 12% 4%;
+    --amber-glow: 38 100% 55%;
+    --amber-dim: 38 70% 35%;
+
+    /* Industrial Gradients */
+    --gradient-industrial: linear-gradient(135deg, hsl(220 10% 8%) 0%, hsl(220 12% 4%) 100%);
+    --gradient-amber: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 70% 35%) 100%);
+    --gradient-steel: linear-gradient(180deg, hsl(220 8% 18%) 0%, hsl(220 10% 10%) 100%);
+    --gradient-hero-overlay: linear-gradient(180deg, hsla(220, 12%, 4%, 0.7) 0%, hsla(220, 12%, 4%, 0.95) 100%);
+
+    /* Shadows */
+    --shadow-industrial: 0 4px 24px -4px hsla(38, 92%, 50%, 0.15);
+    --shadow-card: 0 8px 32px -8px hsla(0, 0%, 0%, 0.5);
+    --shadow-glow: 0 0 40px hsla(38, 92%, 50%, 0.2);
+
+    /* Sidebar */
+    --sidebar-background: 220 10% 8%;
+    --sidebar-foreground: 45 10% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 220 10% 6%;
+    --sidebar-accent: 220 8% 14%;
+    --sidebar-accent-foreground: 45 10% 90%;
+    --sidebar-border: 220 8% 20%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 220 10% 6%;
+    --foreground: 45 10% 90%;
+    --card: 220 10% 10%;
+    --card-foreground: 45 10% 90%;
+    --popover: 220 10% 8%;
+    --popover-foreground: 45 10% 90%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 220 10% 6%;
+    --secondary: 220 8% 14%;
+    --secondary-foreground: 45 10% 90%;
+    --muted: 220 8% 18%;
+    --muted-foreground: 220 8% 55%;
+    --accent: 38 70% 40%;
+    --accent-foreground: 45 10% 95%;
+    --destructive: 38 92% 50%;
+    --destructive-foreground: 220 10% 6%;
+    --border: 220 8% 20%;
+    --input: 220 8% 18%;
+    --ring: 38 92% 50%;
+    --sidebar-background: 220 10% 8%;
+    --sidebar-foreground: 45 10% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 220 10% 6%;
+    --sidebar-accent: 220 8% 14%;
+    --sidebar-accent-foreground: 45 10% 90%;
+    --sidebar-border: 220 8% 20%;
+    --sidebar-ring: 38 92% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+}
+
+@layer components {
+  /* Industrial Card Variants */
+  .card-industrial {
+    @apply bg-card border border-border rounded-lg;
+    background: var(--gradient-steel);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-highlight {
+    @apply bg-card border rounded-lg;
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-industrial);
+  }
+
+  /* Industrial Separator */
+  .separator-industrial {
+    @apply h-px w-full;
+    background: linear-gradient(90deg, transparent, hsl(var(--steel)) 20%, hsl(var(--primary) / 0.5), hsl(var(--steel)) 80%, transparent);
+  }
+
+  /* Grid Pattern Background */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Industrial Texture */
+  .texture-industrial {
+    background-image: 
+      radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.05) 0%, transparent 60%);
+  }
+
+  /* Glow Effects */
+  .glow-amber {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
+  }
+
+  /* Loading Animation */
+  @keyframes pulse-amber {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-amber {
+    animation: pulse-amber 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+
+  /* Progress Bar */
+  .progress-industrial {
+    @apply h-2 rounded-full overflow-hidden;
+    background: hsl(var(--muted));
+  }
+
+  .progress-industrial-fill {
+    @apply h-full rounded-full transition-all duration-500;
+    background: var(--gradient-amber);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--steel));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
