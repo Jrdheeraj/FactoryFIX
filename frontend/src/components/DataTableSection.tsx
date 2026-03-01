@@ -66,7 +66,7 @@ export const DataTableSection = ({ machines }: DataTableSectionProps) => {
         case 'machine_name':
           comparison = a.machine_name.localeCompare(b.machine_name);
           break;
-        case 'status':
+        case 'status': {
           const statusOrder = {
             critical: 0,
             warning: 1,
@@ -75,6 +75,7 @@ export const DataTableSection = ({ machines }: DataTableSectionProps) => {
           comparison =
             statusOrder[a.status] - statusOrder[b.status];
           break;
+        }
         case 'risk_score':
           comparison = a.risk_score - b.risk_score;
           break;
@@ -277,7 +278,7 @@ export const DataTableSection = ({ machines }: DataTableSectionProps) => {
               <tbody>
                 {paginatedData.map((machine, index) => (
                   <motion.tr
-                    key={machine.id}
+                    key={machine.machine_id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}

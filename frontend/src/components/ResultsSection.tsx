@@ -20,13 +20,29 @@ import {
   Legend,
 } from 'recharts';
 import { useMemo } from 'react';
-import { FactoryHealthResponse } from '@/types/factory';
+import {
+  FactoryAnalysisResponse,
+  FactoryHealthData,
+  FactoryHealthResponse,
+  ManufacturingLineOptimization,
+  OptimizationAction,
+  OptimizationStep,
+} from '@/types/factory';
 
 interface ResultsSectionProps {
-  data: FactoryHealthResponse & {
-    manufacturing_line_optimization?: any;
-  };
+  data: FactoryHealthResponse | FactoryAnalysisResponse;
 }
+
+type TooltipPayloadItem = {
+  name?: string;
+  value?: number | string;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string | number;
+};
 
 const COLORS = {
   healthy: 'hsl(38, 92%, 50%)',
@@ -35,12 +51,14 @@ const COLORS = {
 };
 
 export const ResultsSection = ({ data }: ResultsSectionProps) => {
-  /** ✅ FIX: correct data source */
-  const fh = data.factory_health ?? data;
-  const machines = fh.machines ?? [];
-  const lineOpt = data.manufacturing_line_optimization;
+  const fh: FactoryHealthData =
+    'factory_health' in data && data.factory_health ? data.factory_health : data;
 
-  /* -------------------- PIE DATA -------------------- */
+  const lineOpt: ManufacturingLineOptimization | undefined =
+    'manufacturing_line_optimization' in data
+      ? data.manufacturing_line_optimization
+      : undefined;
+
   const pieData = useMemo(
     () => [
       { name: 'Healthy', value: fh.healthy_count ?? 0, fill: COLORS.healthy },
@@ -50,19 +68,29 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
     [fh]
   );
 
-  /* ---------------- RISK DISTRIBUTION ---------------- */
   const riskDistribution = useMemo(
     () => [
-      { range: '0-20', count: machines.filter(m => m.risk_score <= 20).length, fill: COLORS.healthy },
-      { range: '21-40', count: machines.filter(m => m.risk_score > 20 && m.risk_score <= 40).length, fill: COLORS.healthy },
-      { range: '41-60', count: machines.filter(m => m.risk_score > 40 && m.risk_score <= 60).length, fill: COLORS.warning },
-      { range: '61-80', count: machines.filter(m => m.risk_score > 60 && m.risk_score <= 80).length, fill: COLORS.warning },
-      { range: '81-100', count: machines.filter(m => m.risk_score > 80).length, fill: COLORS.critical },
+      { range: '0-20', count: fh.machines.filter((m) => m.risk_score <= 20).length, fill: COLORS.healthy },
+      {
+        range: '21-40',
+        count: fh.machines.filter((m) => m.risk_score > 20 && m.risk_score <= 40).length,
+        fill: COLORS.healthy,
+      },
+      {
+        range: '41-60',
+        count: fh.machines.filter((m) => m.risk_score > 40 && m.risk_score <= 60).length,
+        fill: COLORS.warning,
+      },
+      {
+        range: '61-80',
+        count: fh.machines.filter((m) => m.risk_score > 60 && m.risk_score <= 80).length,
+        fill: COLORS.warning,
+      },
+      { range: '81-100', count: fh.machines.filter((m) => m.risk_score > 80).length, fill: COLORS.critical },
     ],
-    [machines]
+    [fh]
   );
 
-  /* -------------------- STATS -------------------- */
   const stats = [
     { icon: Activity, label: 'Total Records Analyzed', value: fh.total_records ?? 0 },
     { icon: CheckCircle, label: 'Healthy Machines', value: fh.healthy_count ?? 0 },
@@ -70,7 +98,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
     { icon: XCircle, label: 'Critical Machines', value: fh.critical_count ?? 0 },
   ];
 
-  /* ---------------- OPTIMIZATION CHART DATA ---------------- */
   const comparisonData = useMemo(() => {
     if (!lineOpt) return [];
     return [
@@ -80,14 +107,14 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
   }, [lineOpt]);
 
   const stepCapacityData = useMemo(() => {
-    if (!lineOpt) return [];
-    return lineOpt.after_optimization.steps.map((s: any) => ({
+    const steps: OptimizationStep[] = lineOpt?.after_optimization?.steps ?? [];
+    return steps.map((s) => ({
       step: `Step ${s.process_step}`,
       capacity: s.capacity,
     }));
   }, [lineOpt]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
@@ -102,8 +129,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
   return (
     <section id="results" className="py-24 bg-background relative overflow-hidden">
       <div className="container relative z-10 px-6">
-
-        {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -123,7 +148,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
           </p>
         </motion.div>
 
-        {/* OVERALL HEALTH */}
         <div className="max-w-md mx-auto mb-12">
           <div className="card-highlight p-8 text-center">
             <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
@@ -133,7 +157,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
           </div>
         </div>
 
-        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {stats.map((stat, i) => (
             <div key={i} className="card-industrial p-6">
@@ -144,7 +167,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
           ))}
         </div>
 
-        {/* HEALTH CHARTS */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
           <div className="card-industrial p-6">
             <h3 className="text-xl font-semibold mb-4 text-center">
@@ -183,7 +205,6 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
           </div>
         </div>
 
-        {/* MANUFACTURING OPTIMIZATION */}
         {lineOpt && (
           <div className="card-industrial p-8">
             <h3 className="text-2xl font-bold mb-6">
@@ -225,7 +246,7 @@ export const ResultsSection = ({ data }: ResultsSectionProps) => {
             <div className="mt-8">
               <h4 className="font-semibold mb-2">Optimization Actions</h4>
               <ul className="list-disc list-inside text-muted-foreground">
-                {lineOpt.optimization_actions.map((a: any, i: number) => (
+                {lineOpt.optimization_actions.map((a: OptimizationAction, i: number) => (
                   <li key={i}>{a.action} (Step {a.process_step})</li>
                 ))}
               </ul>

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { uploadFactoryFile } from '@/services/factoryService';
+import { FactoryAnalysisResponse } from '@/types/factory';
 
-export const DataUpload = ({ onResult }: { onResult: (data: any) => void }) => {
+export const DataUpload = ({
+  onResult,
+}: {
+  onResult: (data: FactoryAnalysisResponse) => void;
+}) => {
   const [loading, setLoading] = useState(false);
 
   const handleFileUpload = async (file: File) => {

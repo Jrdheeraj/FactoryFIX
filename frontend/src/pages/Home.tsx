@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { DataUpload } from '@/components/DataUpload';
 import { ResultsSection } from '@/components/ResultsSection';
+import { FactoryAnalysisResponse } from '@/types/factory';
 
 export const Home = () => {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] =
+    useState<FactoryAnalysisResponse | null>(null);
 
   return (
     <>
