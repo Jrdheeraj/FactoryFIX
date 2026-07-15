@@ -1,4 +1,3 @@
-import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/HeroSection';
 import { OverviewSection } from '@/components/OverviewSection';
 import { UploadSection } from '@/components/UploadSection';
@@ -26,8 +25,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-
       <main>
         <HeroSection />
         <OverviewSection />

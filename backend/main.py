@@ -64,43 +64,143 @@ def system_output(steps):
     return min(s["capacity"] for s in steps)
 
 
-# ================= CSV ANALYSIS =================
+# ================= HELPERS: SMART COLUMN DETECTION =================
+def _find_column(df_columns: list, candidates: list[str]) -> str | None:
+    """Return the first df column whose lowered name contains any candidate substring."""
+    lower_cols = {c: c.lower().replace(" ", "_").replace("-", "_") for c in df_columns}
+    for candidate in candidates:
+        for orig, low in lower_cols.items():
+            if candidate in low:
+                return orig
+    return None
+
+
+def _prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Auto-detect or synthesize `process_step` and `base_capacity_per_day` columns.
+
+    Strategy:
+    1. If exact columns exist, use them directly.
+    2. Otherwise, fuzzy-match column names (e.g. "step", "process", "stage" → process_step).
+    3. If still missing, synthesize from available numeric columns so *any* file works.
+    """
+    cols = list(df.columns)
+
+    # --- process_step ---
+    if "process_step" not in df.columns:
+        step_col = _find_column(cols, [
+            "process_step", "step", "stage", "phase", "operation",
+            "process", "station", "line", "sequence",
+        ])
+        if step_col:
+            df = df.rename(columns={step_col: "process_step"})
+        else:
+            # Assign sequential step numbers (1-based, capped at row count)
+            num_steps = min(len(df), max(3, len(df) // 5))
+            df["process_step"] = [(i % num_steps) + 1 for i in range(len(df))]
+
+    # --- base_capacity_per_day ---
+    if "base_capacity_per_day" not in df.columns:
+        cap_col = _find_column(cols, [
+            "capacity", "output", "throughput", "production", "rate",
+            "units", "quantity", "volume", "yield", "count",
+        ])
+        if cap_col:
+            df = df.rename(columns={cap_col: "base_capacity_per_day"})
+        else:
+            # Pick the first numeric column that isn't process_step
+            numeric_cols = df.select_dtypes(include="number").columns.tolist()
+            numeric_cols = [c for c in numeric_cols if c != "process_step"]
+            if numeric_cols:
+                df = df.rename(columns={numeric_cols[0]: "base_capacity_per_day"})
+            else:
+                # No numeric columns at all — synthesize random capacity
+                df["base_capacity_per_day"] = [
+                    random.randint(100, 500) for _ in range(len(df))
+                ]
+
+    # --- health_status (optional, best-effort) ---
+    if "health_status" not in df.columns:
+        hs_col = _find_column(cols, [
+            "health", "status", "condition", "state",
+        ])
+        if hs_col:
+            df = df.rename(columns={hs_col: "health_status"})
+
+    # Coerce to numeric, drop rows that can't be converted
+    df["process_step"] = pd.to_numeric(df["process_step"], errors="coerce")
+    df["base_capacity_per_day"] = pd.to_numeric(df["base_capacity_per_day"], errors="coerce")
+    df = df.dropna(subset=["process_step", "base_capacity_per_day"])
+
+    if df.empty:
+        return df
+
+    df["process_step"] = df["process_step"].astype(int)
+    df["base_capacity_per_day"] = df["base_capacity_per_day"].astype(float)
+
+    return df
+
+
+# ================= CSV / EXCEL ANALYSIS =================
+ALLOWED_EXTENSIONS = (".csv", ".xlsx", ".xls")
+
+
 @app.post("/factory-analysis/csv")
 async def factory_analysis_csv(file: UploadFile = File(...)):
     filename = (file.filename or "").strip()
     lower_name = filename.lower()
-    if not lower_name.endswith((".csv", ".xlsx")):
-        raise HTTPException(400, "Only CSV or Excel allowed")
+    if not lower_name.endswith(ALLOWED_EXTENSIONS):
+        raise HTTPException(
+            400,
+            f"Unsupported file type. Please upload a CSV or Excel file ({', '.join(ALLOWED_EXTENSIONS)}).",
+        )
 
     try:
-        df = pd.read_csv(file.file) if lower_name.endswith(".csv") else pd.read_excel(file.file)
+        raw_bytes = await file.read()
+        import io
+        buf = io.BytesIO(raw_bytes)
+
+        if lower_name.endswith(".csv"):
+            # Try common encodings
+            for encoding in ("utf-8", "latin-1", "cp1252"):
+                try:
+                    buf.seek(0)
+                    df = pd.read_csv(buf, encoding=encoding)
+                    break
+                except (UnicodeDecodeError, pd.errors.ParserError):
+                    continue
+            else:
+                raise HTTPException(400, "Could not decode CSV file. Please save as UTF-8.")
+        else:
+            buf.seek(0)
+            # read_excel handles .xlsx and .xls (with openpyxl / xlrd)
+            try:
+                df = pd.read_excel(buf, engine=None)
+            except Exception:
+                buf.seek(0)
+                df = pd.read_excel(buf, engine="openpyxl")
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(400, f"Failed to parse file: {exc}") from exc
 
     if df.empty:
-        raise HTTPException(400, "Empty file")
+        raise HTTPException(400, "The uploaded file is empty or contains no data rows.")
 
-    required_columns = {"process_step", "base_capacity_per_day"}
-    missing_columns = sorted(required_columns - set(df.columns))
-    if missing_columns:
+    # Drop completely empty rows / columns
+    df = df.dropna(how="all").dropna(axis=1, how="all")
+
+    if df.empty:
+        raise HTTPException(400, "The uploaded file has no usable data after removing empty rows.")
+
+    # ---------- Smart column detection & synthesis ----------
+    df = _prepare_dataframe(df)
+
+    if df.empty:
         raise HTTPException(
             400,
-            f"Missing required columns: {', '.join(missing_columns)}",
+            "No valid numeric data could be extracted from the file. "
+            "Please ensure the file contains at least some numeric values.",
         )
-
-    # Coerce analysis columns early so invalid data returns clear 400s instead of 500s.
-    step_series = pd.to_numeric(df["process_step"], errors="coerce")
-    cap_series = pd.to_numeric(df["base_capacity_per_day"], errors="coerce")
-    invalid_mask = step_series.isna() | cap_series.isna()
-    if invalid_mask.any():
-        bad_rows = [int(i) + 2 for i in invalid_mask[invalid_mask].index[:5]]
-        raise HTTPException(
-            400,
-            f"Invalid numeric values in process_step/base_capacity_per_day at CSV rows: {bad_rows}",
-        )
-
-    df["process_step"] = step_series.astype(int)
-    df["base_capacity_per_day"] = cap_series.astype(float)
 
     # ---------------- MACHINE HEALTH ----------------
     machines = []
