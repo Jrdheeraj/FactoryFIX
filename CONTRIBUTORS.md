@@ -1,4 +1,4 @@
 # Contributors
 
 - Dheeraj
-- Ashokk
+- Ashok
